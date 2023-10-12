@@ -1,49 +1,59 @@
 #!/usr/bin/python3
+"""Reads from standard input and computes metrics.
+
+After every ten lines or the input of a keyboard interruption (CTRL + C),
+prints the following statistics:
+    - Total file size up to that point.
+    - Count of read status codes up to that point.
 """
-Module docs
-"""
 
 
-if __name__ == '__main__':
-    from sys import stdin
+def print_stats(size, status_codes):
+    """Print accumulated metrics.
 
-    code_dict = {}
-    total_size = 0
-    file_size_index = -1
-    status_code_index = -2
-    valid_index = [200, 301, 400, 401, 403, 404, 405, 500]
-    i = 0
+    Args:
+        size (int): The accumulated read file size.
+        status_codes (dict): The accumulated count of status codes.
+    """
+    print("File size: {}".format(size))
+    for key in sorted(status_codes):
+        print("{}: {}".format(key, status_codes[key]))
+
+
+if __name__ == "__main__":
+    import sys
+
+    size = 0
+    status_codes = {}
+    valid_codes = ['200', '301', '400', '401', '403', '404', '405', '500']
+    count = 0
+
     try:
-        for line in stdin:
-            if i != 0 and i % 10 == 0:
-                print("File size: {:d}".format(total_size))
-                for c in sorted(code_dict):
-                    print("{}: {}".format(c, code_dict[c]))
-            stripped = line.split()
+        for line in sys.stdin:
+            if count == 10:
+                print_stats(size, status_codes)
+                count = 1
+            else:
+                count += 1
+
+            line = line.split()
+
             try:
-                file_size = int(stripped[file_size_index])
-                total_size += file_size
+                size += int(line[-1])
             except (IndexError, ValueError):
                 pass
+
             try:
-                code = int(stripped[status_code_index])
-            except (IndexError, ValueError):
+                if line[-2] in valid_codes:
+                    if status_codes.get(line[-2], -1) == -1:
+                        status_codes[line[-2]] = 1
+                    else:
+                        status_codes[line[-2]] += 1
+            except IndexError:
                 pass
-            if code in valid_index:
-                print(line)
-                print(code)
-                print(code_dict)
-                if code in code_dict:
-                    code_dict[code] = code_dict[code] + 1
-                else:
-                    code_dict[code] = 1
-            
-            i += 1
-        print("File size: {:d}".format(total_size))
-        for c in sorted(code_dict):
-            print("{}: {}".format(c, code_dict[c]))
-    except KeyboardInterrupt as e:
-        print("File size: {:d}".format(total_size))
-        for c in sorted(code_dict):
-            print("{}: {}".format(c, code_dict[c]))
+
+        print_stats(size, status_codes)
+
+    except KeyboardInterrupt:
+        print_stats(size, status_codes)
         raise
